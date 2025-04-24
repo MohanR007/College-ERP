@@ -2,11 +2,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   user_id: number;
   email: string;
   role: "student" | "faculty";
+  name?: string;
 }
 
 interface AuthContextType {
@@ -41,33 +43,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      // This would normally call the Supabase API
-      // For demonstration purposes, we'll simulate authentication
-      // Replace this with actual Supabase authentication when connected
       
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      // Simulate successful login with mock data
-      // In a real implementation, this would verify credentials against Supabase
-      
-      // Mock user data - this should come from your Supabase auth
-      const mockUser = {
-        user_id: email === "teacher@example.com" ? 1 : 2,
-        email,
-        role: email === "teacher@example.com" ? "faculty" : "student" as "faculty" | "student",
+      // Query the users table to find the user with matching email and password
+      const { data: users, error } = await supabase
+        .from('users')
+        .select(`
+          user_id,
+          email,
+          role,
+          students(name),
+          faculty(name)
+        `)
+        .eq('email', email)
+        .eq('password_hash', password)
+        .single();
+
+      if (error || !users) {
+        throw new Error('Invalid email or password');
+      }
+
+      // Get the name based on the role
+      const name = users.role === 'student' ? 
+        users.students?.name : 
+        users.faculty?.name;
+
+      const userData = {
+        user_id: users.user_id,
+        email: users.email,
+        role: users.role as "student" | "faculty",
+        name: name
       };
-      
-      setUser(mockUser);
-      localStorage.setItem("erpUser", JSON.stringify(mockUser));
+
+      setUser(userData);
+      localStorage.setItem("erpUser", JSON.stringify(userData));
       
       toast({
         title: "Login successful",
-        description: `Welcome back, ${mockUser.role}!`,
+        description: `Welcome back, ${name || userData.email}!`,
       });
       
       // Redirect based on role
-      navigate(mockUser.role === "faculty" ? "/teacher-dashboard" : "/student-dashboard");
+      navigate(userData.role === "faculty" ? "/teacher-dashboard" : "/student-dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast({

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -96,7 +95,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="flex-shrink-0 group block">
                 <div className="flex items-center">
                   <div className="ml-3">
-                    <p className="text-base font-medium text-white">{user?.email}</p>
+                    <p className="text-base font-medium text-white">{user?.name || user?.email}</p>
                     <p className="text-sm font-medium text-gray-400 group-hover:text-gray-300">
                       {user?.role === "faculty" ? "Teacher" : "Student"}
                     </p>
@@ -140,7 +139,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="flex-shrink-0 w-full group block">
                 <div className="flex items-center">
                   <div>
-                    <p className="text-sm font-medium text-white">{user?.email}</p>
+                    <p className="text-sm font-medium text-white">{user?.name || user?.email}</p>
                     <p className="text-xs font-medium text-gray-300 group-hover:text-gray-200">
                       {user?.role === "faculty" ? "Teacher" : "Student"}
                     </p>
@@ -185,13 +184,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </button>
             <div className="flex justify-between items-center px-4">
               <h1 className="text-lg font-semibold text-gray-900">College ERP</h1>
-              <Button 
-                variant="ghost" 
-                className="text-gray-500" 
-                onClick={logout}
-              >
-                Logout
-              </Button>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600">{user?.name || user?.email}</span>
+                <Button 
+                  variant="ghost" 
+                  className="text-gray-500" 
+                  onClick={logout}
+                >
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
 
