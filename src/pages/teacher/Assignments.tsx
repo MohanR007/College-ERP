@@ -23,6 +23,16 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Form, 
   FormField, 
   FormItem, 
@@ -37,7 +47,7 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, PencilIcon, PlusIcon } from "lucide-react";
+import { CalendarIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -46,7 +56,7 @@ const assignmentSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   description: z.string().min(5, { message: "Description must be at least 5 characters" }),
   due_date: z.date({ required_error: "Due date is required" }),
-  course_id: z.number({ required_error: "Course is required" })
+  course_id: z.string().min(1, { message: "Course is required" }).transform((val) => parseInt(val, 10))
 });
 
 const TeacherAssignments = () => {
@@ -56,6 +66,9 @@ const TeacherAssignments = () => {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [teacherCourses, setTeacherCourses] = useState([]);
+  const [deleteAssignmentId, setDeleteAssignmentId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm({
     resolver: zodResolver(assignmentSchema),
@@ -63,7 +76,7 @@ const TeacherAssignments = () => {
       title: "",
       description: "",
       due_date: undefined,
-      course_id: undefined
+      course_id: ""
     }
   });
 
@@ -136,6 +149,10 @@ const TeacherAssignments = () => {
   // Handle form submission for creating/updating assignment
   const onSubmit = async (values) => {
     try {
+      setIsSubmitting(true);
+      
+      console.log("Form values:", values);
+      
       // Get faculty ID for current user
       const { data: facultyData, error: facultyError } = await supabase
         .from('faculty')
@@ -144,6 +161,8 @@ const TeacherAssignments = () => {
         .single();
         
       if (facultyError) throw facultyError;
+      
+      console.log("Faculty data:", facultyData);
       
       // Format date to YYYY-MM-DD
       const formattedDate = format(values.due_date, "yyyy-MM-dd");
@@ -168,6 +187,8 @@ const TeacherAssignments = () => {
         });
       } else {
         // Create new assignment
+        console.log("Creating new assignment with course_id:", values.course_id);
+        
         const { error } = await supabase
           .from('assignments')
           .insert({
@@ -178,7 +199,10 @@ const TeacherAssignments = () => {
             created_by: facultyData.faculty_id
           });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
         
         toast({
           title: "Success",
@@ -197,9 +221,11 @@ const TeacherAssignments = () => {
       console.error("Error saving assignment:", error);
       toast({
         title: "Error",
-        description: "Failed to save assignment",
+        description: error.message || "Failed to save assignment",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -208,7 +234,7 @@ const TeacherAssignments = () => {
     setEditingAssignment(assignment);
     form.setValue("title", assignment.title);
     form.setValue("description", assignment.description);
-    form.setValue("course_id", assignment.course_id);
+    form.setValue("course_id", assignment.course_id.toString());
     form.setValue("due_date", new Date(assignment.due_date));
     setIsDialogOpen(true);
   };
@@ -218,6 +244,38 @@ const TeacherAssignments = () => {
     setEditingAssignment(null);
     form.reset();
     setIsDialogOpen(true);
+  };
+  
+  // Handle delete assignment
+  const handleDeleteAssignment = async () => {
+    if (!deleteAssignmentId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('assignment_id', deleteAssignmentId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Assignment deleted successfully",
+      });
+      
+      // Refresh assignments list
+      fetchAssignments(teacherCourses.map(course => course.course_id));
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete assignment",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteAssignmentId(null);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -247,7 +305,7 @@ const TeacherAssignments = () => {
                       <TableHead>Course</TableHead>
                       <TableHead>Section</TableHead>
                       <TableHead>Due Date</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
+                      <TableHead className="w-[120px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -259,13 +317,23 @@ const TeacherAssignments = () => {
                         <TableCell>
                           {format(new Date(assignment.due_date), "MMM d, yyyy")}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="flex items-center gap-2">
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => handleEditAssignment(assignment)}
                           >
                             <PencilIcon className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setDeleteAssignmentId(assignment.assignment_id);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2Icon className="h-4 w-4 text-red-500" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -301,18 +369,21 @@ const TeacherAssignments = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Course</FormLabel>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={field.value || ""}
-                      onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                    >
-                      <option value="" disabled>Select a course</option>
-                      {teacherCourses.map((course) => (
-                        <option key={course.course_id} value={course.course_id}>
-                          {course.course_name} - Section {course.sections?.name}
-                        </option>
-                      ))}
-                    </select>
+                    <FormControl>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                      >
+                        <option value="">Select a course</option>
+                        {teacherCourses.map((course) => (
+                          <option key={course.course_id} value={course.course_id}>
+                            {course.course_name} - Section {course.sections?.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -324,7 +395,7 @@ const TeacherAssignments = () => {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Assignment title" {...field} />
+                      <Input placeholder="Assignment title" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -341,6 +412,7 @@ const TeacherAssignments = () => {
                         placeholder="Provide details about the assignment" 
                         className="min-h-[120px]" 
                         {...field} 
+                        disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />
@@ -362,6 +434,7 @@ const TeacherAssignments = () => {
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isSubmitting}
                           >
                             {field.value ? (
                               format(field.value, "PPP")
@@ -378,6 +451,7 @@ const TeacherAssignments = () => {
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
+                          disabled={isSubmitting}
                         />
                       </PopoverContent>
                     </Popover>
@@ -387,16 +461,34 @@ const TeacherAssignments = () => {
               />
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
+                  <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
                 </DialogClose>
-                <Button type="submit">
-                  {editingAssignment ? "Update Assignment" : "Create Assignment"}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : (editingAssignment ? "Update Assignment" : "Create Assignment")}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this assignment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAssignment} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
