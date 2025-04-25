@@ -103,18 +103,21 @@ const TeacherLeave = () => {
     enabled: !!facultyData?.faculty_id
   });
 
-  const handleApproveLeave = async (leaveId: number) => {
+  const handleStatusChange = async (leaveId: number, newStatus: 'Approved' | 'Rejected' | 'Pending') => {
+    const actionText = newStatus === 'Approved' ? 'approve' : 
+                      newStatus === 'Rejected' ? 'reject' : 'reset';
+    
     setAlertDialogData({
       isOpen: true,
-      title: "Approve Leave Application",
-      description: "Are you sure you want to approve this leave application?",
+      title: `${newStatus === 'Pending' ? 'Reset' : newStatus} Leave Application`,
+      description: `Are you sure you want to ${actionText} this leave application?`,
       action: async () => {
         setIsProcessing(true);
         try {
           const { error } = await supabase
             .from('leaveapplications')
             .update({ 
-              status: 'Approved',
+              status: newStatus,
               reviewed_by: facultyData?.faculty_id 
             })
             .eq('leave_id', leaveId);
@@ -122,53 +125,15 @@ const TeacherLeave = () => {
           if (error) throw error;
           
           toast({
-            title: "Leave application approved",
-            description: "The leave application has been approved successfully."
+            title: `Leave application ${newStatus.toLowerCase()}`,
+            description: `The leave application has been ${newStatus === 'Pending' ? 'reset' : newStatus.toLowerCase()} successfully.`
           });
           refetch();
         } catch (error) {
-          console.error("Error approving leave:", error);
+          console.error(`Error ${actionText}ing leave:`, error);
           toast({
             title: "Error",
-            description: "Failed to approve the leave application.",
-            variant: "destructive"
-          });
-        } finally {
-          setIsProcessing(false);
-          setAlertDialogData(prev => ({ ...prev, isOpen: false }));
-        }
-      }
-    });
-  };
-
-  const handleRejectLeave = async (leaveId: number) => {
-    setAlertDialogData({
-      isOpen: true,
-      title: "Reject Leave Application",
-      description: "Are you sure you want to reject this leave application?",
-      action: async () => {
-        setIsProcessing(true);
-        try {
-          const { error } = await supabase
-            .from('leaveapplications')
-            .update({ 
-              status: 'Rejected',
-              reviewed_by: facultyData?.faculty_id 
-            })
-            .eq('leave_id', leaveId);
-          
-          if (error) throw error;
-          
-          toast({
-            title: "Leave application rejected",
-            description: "The leave application has been rejected."
-          });
-          refetch();
-        } catch (error) {
-          console.error("Error rejecting leave:", error);
-          toast({
-            title: "Error",
-            description: "Failed to reject the leave application.",
+            description: `Failed to ${actionText} the leave application.`,
             variant: "destructive"
           });
         } finally {
@@ -255,7 +220,7 @@ const TeacherLeave = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleApproveLeave(leave.leave_id)}
+                                onClick={() => handleStatusChange(leave.leave_id, 'Approved')}
                                 disabled={isProcessing}
                               >
                                 <Check className="h-4 w-4 text-green-600" />
@@ -263,21 +228,46 @@ const TeacherLeave = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleRejectLeave(leave.leave_id)}
+                                onClick={() => handleStatusChange(leave.leave_id, 'Rejected')}
                                 disabled={isProcessing}
                               >
                                 <X className="h-4 w-4 text-red-600" />
                               </Button>
                             </>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditLeave(leave)}
-                            disabled={isProcessing}
-                          >
-                            <FilePen className="h-4 w-4" />
-                          </Button>
+                          {leave.status === 'Approved' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStatusChange(leave.leave_id, 'Rejected')}
+                              disabled={isProcessing}
+                              title="Reject approved leave"
+                            >
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          )}
+                          {leave.status === 'Rejected' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStatusChange(leave.leave_id, 'Approved')}
+                              disabled={isProcessing}
+                              title="Approve rejected leave"
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                          )}
+                          {leave.status !== 'Pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStatusChange(leave.leave_id, 'Pending')}
+                              disabled={isProcessing}
+                              title="Reset to pending"
+                            >
+                              <FilePen className="h-4 w-4 text-yellow-600" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -296,24 +286,7 @@ const TeacherLeave = () => {
         </Card>
       </div>
 
-      {/* Edit Leave Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Leave Application</DialogTitle>
-          </DialogHeader>
-          {editingLeave && (
-            <LeaveApplicationForm
-              onSuccess={handleEditSuccess}
-              initialData={editingLeave}
-              isTeacher={true}
-              facultyId={facultyData?.faculty_id}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Alert Dialog */}
+      {/* Edit Leave Dialog - Removed since we're not actually editing the application */}
       <AlertDialog open={alertDialogData.isOpen} onOpenChange={(isOpen) => 
         setAlertDialogData(prev => ({ ...prev, isOpen }))
       }>
