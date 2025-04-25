@@ -77,7 +77,7 @@ const TeacherAssignments = () => {
         const { data: facultyData, error: facultyError } = await supabase
           .from('faculty')
           .select('faculty_id')
-          .eq('user_id', user.id)
+          .eq('user_id', user.user_id) // Changed from user.id to user.user_id
           .single();
         
         if (facultyError) throw facultyError;
@@ -140,7 +140,7 @@ const TeacherAssignments = () => {
       const { data: facultyData, error: facultyError } = await supabase
         .from('faculty')
         .select('faculty_id')
-        .eq('user_id', user.id)
+        .eq('user_id', user.user_id) // Changed from user.id to user.user_id
         .single();
         
       if (facultyError) throw facultyError;

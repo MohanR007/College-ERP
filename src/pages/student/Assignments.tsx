@@ -26,7 +26,7 @@ const StudentAssignments = () => {
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('student_id, section_id')
-          .eq('user_id', user.id)
+          .eq('user_id', user.user_id) // Changed from user.id to user.user_id
           .single();
 
         if (studentError) throw studentError;
