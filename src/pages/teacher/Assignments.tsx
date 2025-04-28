@@ -20,7 +20,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogFooter,
-  DialogClose
+  DialogClose,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { 
   AlertDialog,
@@ -182,6 +183,7 @@ const TeacherAssignments = () => {
         });
       } else {
         // Create new assignment
+        // Ensure the created_by field is set to the faculty_id
         const { error } = await supabase
           .from('assignments')
           .insert({
@@ -209,7 +211,7 @@ const TeacherAssignments = () => {
       setIsDialogOpen(false);
       setEditingAssignment(null);
       form.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving assignment:", error);
       toast({
         title: "Error",
@@ -354,6 +356,11 @@ const TeacherAssignments = () => {
             <DialogTitle>
               {editingAssignment ? "Edit Assignment" : "Create New Assignment"}
             </DialogTitle>
+            <DialogDescription>
+              {editingAssignment 
+                ? "Update the details of this assignment." 
+                : "Fill in the details to create a new assignment."}
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
