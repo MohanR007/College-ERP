@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Table, 
   TableBody, 
@@ -86,27 +85,18 @@ const TeacherAssignments = () => {
       if (!user) return;
       
       try {
-        // Get faculty ID for current user
-        const { data: facultyData, error: facultyError } = await supabase
-          .from('faculty')
-          .select('faculty_id')
-          .eq('user_id', user.user_id) // Changed from user.id to user.user_id
-          .single();
+        // Get courses taught by this faculty member
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select('course_id, course_name, section_id, sections(name)')
+          .eq('faculty_id', user.faculty_id);
         
-        if (facultyError) throw facultyError;
+        if (coursesError) throw coursesError;
         
-        if (facultyData) {
-          // Get courses taught by this faculty
-          const { data: coursesData, error: coursesError } = await supabase
-            .from('courses')
-            .select('course_id, course_name, section_id, sections(name)')
-            .eq('faculty_id', facultyData.faculty_id);
-          
-          if (coursesError) throw coursesError;
-          
-          setTeacherCourses(coursesData || []);
-          
-          // Fetch assignments for these courses
+        setTeacherCourses(coursesData || []);
+        
+        // Fetch assignments for these courses
+        if (coursesData) {
           fetchAssignments(coursesData.map(course => course.course_id));
         }
       } catch (error) {
@@ -123,7 +113,7 @@ const TeacherAssignments = () => {
   }, [user, toast]);
   
   // Fetch assignments for teacher's courses
-  const fetchAssignments = async (courseIds) => {
+  const fetchAssignments = async (courseIds: number[]) => {
     if (!courseIds || courseIds.length === 0) return;
     
     try {
@@ -147,25 +137,9 @@ const TeacherAssignments = () => {
   };
 
   // Handle form submission for creating/updating assignment
-  const onSubmit = async (values) => {
+  const onSubmit = async (values: z.infer<typeof assignmentSchema>) => {
     try {
       setIsSubmitting(true);
-      
-      console.log("Form values:", values);
-      
-      // Get faculty ID for current user
-      const { data: facultyData, error: facultyError } = await supabase
-        .from('faculty')
-        .select('faculty_id')
-        .eq('user_id', user.user_id) // Changed from user.id to user.user_id
-        .single();
-        
-      if (facultyError) throw facultyError;
-      
-      console.log("Faculty data:", facultyData);
-      
-      // Format date to YYYY-MM-DD
-      const formattedDate = format(values.due_date, "yyyy-MM-dd");
       
       if (editingAssignment) {
         // Update existing assignment
@@ -174,7 +148,7 @@ const TeacherAssignments = () => {
           .update({
             title: values.title,
             description: values.description,
-            due_date: formattedDate,
+            due_date: format(values.due_date, "yyyy-MM-dd"),
             course_id: values.course_id
           })
           .eq('assignment_id', editingAssignment.assignment_id);
@@ -187,22 +161,17 @@ const TeacherAssignments = () => {
         });
       } else {
         // Create new assignment
-        console.log("Creating new assignment with course_id:", values.course_id);
-        
         const { error } = await supabase
           .from('assignments')
           .insert({
             title: values.title,
             description: values.description,
-            due_date: formattedDate,
+            due_date: format(values.due_date, "yyyy-MM-dd"),
             course_id: values.course_id,
-            created_by: facultyData.faculty_id
+            created_by: user?.faculty_id
           });
           
-        if (error) {
-          console.error("Insert error:", error);
-          throw error;
-        }
+        if (error) throw error;
         
         toast({
           title: "Success",

@@ -37,28 +37,38 @@ export type Database = {
         Row: {
           assignment_id: number
           course_id: number | null
+          created_at: string | null
           created_by: number | null
           description: string | null
           due_date: string | null
-          title: string | null
+          title: string
         }
         Insert: {
-          assignment_id?: never
+          assignment_id?: number
           course_id?: number | null
+          created_at?: string | null
           created_by?: number | null
           description?: string | null
           due_date?: string | null
-          title?: string | null
+          title: string
         }
         Update: {
-          assignment_id?: never
+          assignment_id?: number
           course_id?: number | null
+          created_at?: string | null
           created_by?: number | null
           description?: string | null
           due_date?: string | null
-          title?: string | null
+          title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
           {
             foreignKeyName: "assignments_created_by_fkey"
             columns: ["created_by"]
