@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,21 +56,25 @@ const assignmentSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   description: z.string().min(5, { message: "Description must be at least 5 characters" }),
   due_date: z.date({ required_error: "Due date is required" }),
-  course_id: z.string().min(1, { message: "Course is required" }).transform((val) => parseInt(val, 10))
+  course_id: z.string().min(1, { message: "Course is required" })
 });
+
+// Define the type for our form schema
+type AssignmentFormValues = z.infer<typeof assignmentSchema>;
 
 const TeacherAssignments = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAssignment, setEditingAssignment] = useState(null);
-  const [assignments, setAssignments] = useState([]);
-  const [teacherCourses, setTeacherCourses] = useState([]);
-  const [deleteAssignmentId, setDeleteAssignmentId] = useState(null);
+  const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
+  const [deleteAssignmentId, setDeleteAssignmentId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [facultyId, setFacultyId] = useState<number | null>(null);
   
-  const form = useForm({
+  const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
       title: "",
@@ -85,19 +90,32 @@ const TeacherAssignments = () => {
       if (!user) return;
       
       try {
-        // Get courses taught by this faculty member
-        const { data: coursesData, error: coursesError } = await supabase
-          .from('courses')
-          .select('course_id, course_name, section_id, sections(name)')
-          .eq('faculty_id', user.faculty_id);
+        // First get the faculty ID for this user
+        const { data: facultyData, error: facultyError } = await supabase
+          .from('faculty')
+          .select('faculty_id')
+          .eq('user_id', user.user_id)
+          .single();
         
-        if (coursesError) throw coursesError;
+        if (facultyError) throw facultyError;
         
-        setTeacherCourses(coursesData || []);
-        
-        // Fetch assignments for these courses
-        if (coursesData) {
-          fetchAssignments(coursesData.map(course => course.course_id));
+        if (facultyData) {
+          setFacultyId(facultyData.faculty_id);
+          
+          // Now get courses taught by this faculty member
+          const { data: coursesData, error: coursesError } = await supabase
+            .from('courses')
+            .select('course_id, course_name, section_id, sections(name)')
+            .eq('faculty_id', facultyData.faculty_id);
+          
+          if (coursesError) throw coursesError;
+          
+          setTeacherCourses(coursesData || []);
+          
+          // Fetch assignments for these courses
+          if (coursesData && coursesData.length > 0) {
+            fetchAssignments(coursesData.map(course => course.course_id));
+          }
         }
       } catch (error) {
         console.error("Error fetching teacher data:", error);
@@ -137,9 +155,12 @@ const TeacherAssignments = () => {
   };
 
   // Handle form submission for creating/updating assignment
-  const onSubmit = async (values: z.infer<typeof assignmentSchema>) => {
+  const onSubmit = async (values: AssignmentFormValues) => {
     try {
       setIsSubmitting(true);
+      
+      // Convert course_id string to number for database
+      const courseIdNumber = parseInt(values.course_id, 10);
       
       if (editingAssignment) {
         // Update existing assignment
@@ -149,7 +170,7 @@ const TeacherAssignments = () => {
             title: values.title,
             description: values.description,
             due_date: format(values.due_date, "yyyy-MM-dd"),
-            course_id: values.course_id
+            course_id: courseIdNumber
           })
           .eq('assignment_id', editingAssignment.assignment_id);
           
@@ -167,8 +188,8 @@ const TeacherAssignments = () => {
             title: values.title,
             description: values.description,
             due_date: format(values.due_date, "yyyy-MM-dd"),
-            course_id: values.course_id,
-            created_by: user?.faculty_id
+            course_id: courseIdNumber,
+            created_by: facultyId
           });
           
         if (error) throw error;
@@ -180,7 +201,9 @@ const TeacherAssignments = () => {
       }
       
       // Refresh assignments list
-      fetchAssignments(teacherCourses.map(course => course.course_id));
+      if (teacherCourses && teacherCourses.length > 0) {
+        fetchAssignments(teacherCourses.map(course => course.course_id));
+      }
       
       // Close dialog and reset form
       setIsDialogOpen(false);
@@ -199,7 +222,7 @@ const TeacherAssignments = () => {
   };
 
   // Open dialog to edit assignment
-  const handleEditAssignment = (assignment) => {
+  const handleEditAssignment = (assignment: any) => {
     setEditingAssignment(assignment);
     form.setValue("title", assignment.title);
     form.setValue("description", assignment.description);
@@ -233,7 +256,9 @@ const TeacherAssignments = () => {
       });
       
       // Refresh assignments list
-      fetchAssignments(teacherCourses.map(course => course.course_id));
+      if (teacherCourses && teacherCourses.length > 0) {
+        fetchAssignments(teacherCourses.map(course => course.course_id));
+      }
     } catch (error) {
       console.error("Error deleting assignment:", error);
       toast({
