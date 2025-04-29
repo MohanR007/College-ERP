@@ -201,8 +201,8 @@ const TeacherAssignments = () => {
           description: "Assignment updated successfully",
         });
       } else {
-        // Create new assignment with the faculty_id
-        console.info("Creating new assignment with course_id:", values.course_id);
+        // Create new assignment with the faculty_id as created_by
+        console.info("Creating new assignment with course_id:", values.course_id, "and faculty_id:", facultyId);
         const { error } = await supabase
           .from('assignments')
           .insert({
@@ -210,10 +210,13 @@ const TeacherAssignments = () => {
             description: values.description,
             due_date: format(values.due_date, "yyyy-MM-dd"),
             course_id: values.course_id,
-            created_by: facultyId
+            created_by: facultyId  // This is crucial for RLS policy to work
           });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error details:", error);
+          throw error;
+        }
         
         toast({
           title: "Success",
@@ -248,6 +251,7 @@ const TeacherAssignments = () => {
     form.setValue("title", assignment.title);
     form.setValue("description", assignment.description);
     form.setValue("course_id", assignment.course_id);
+    // Ensure date is properly parsed
     form.setValue("due_date", new Date(assignment.due_date));
     setIsDialogOpen(true);
   };
