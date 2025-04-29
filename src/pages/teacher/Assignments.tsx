@@ -57,10 +57,9 @@ const assignmentSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   description: z.string().min(5, { message: "Description must be at least 5 characters" }),
   due_date: z.date({ required_error: "Due date is required" }),
-  course_id: z.string().min(1, { message: "Course is required" })
+  course_id: z.number({ required_error: "Course is required" })
 });
 
-// Define the type for our form schema
 type AssignmentFormValues = z.infer<typeof assignmentSchema>;
 
 const TeacherAssignments = () => {
@@ -81,55 +80,68 @@ const TeacherAssignments = () => {
       title: "",
       description: "",
       due_date: undefined,
-      course_id: ""
+      course_id: undefined
     }
   });
 
-  // Fetch teacher's faculty ID and courses
+  // Fetch faculty ID first, then fetch courses and assignments
   useEffect(() => {
-    const fetchTeacherData = async () => {
+    const fetchFacultyId = async () => {
       if (!user) return;
       
       try {
-        // First get the faculty ID for this user
-        const { data: facultyData, error: facultyError } = await supabase
+        // Get faculty ID for the logged-in user
+        const { data, error } = await supabase
           .from('faculty')
           .select('faculty_id')
           .eq('user_id', user.user_id)
           .single();
         
-        if (facultyError) throw facultyError;
+        if (error) throw error;
         
-        if (facultyData) {
-          setFacultyId(facultyData.faculty_id);
-          
-          // Now get courses taught by this faculty member
-          const { data: coursesData, error: coursesError } = await supabase
-            .from('courses')
-            .select('course_id, course_name, section_id, sections(name)')
-            .eq('faculty_id', facultyData.faculty_id);
-          
-          if (coursesError) throw coursesError;
-          
-          setTeacherCourses(coursesData || []);
-          
-          // Fetch assignments for these courses
-          if (coursesData && coursesData.length > 0) {
-            fetchAssignments(coursesData.map(course => course.course_id));
-          }
+        if (data) {
+          console.info("Faculty data:", data);
+          setFacultyId(data.faculty_id);
+          fetchTeacherCourses(data.faculty_id);
         }
       } catch (error) {
-        console.error("Error fetching teacher data:", error);
+        console.error("Error fetching faculty ID:", error);
         toast({
           title: "Error",
-          description: "Failed to load teacher data",
+          description: "Failed to load faculty information",
           variant: "destructive"
         });
       }
     };
     
-    fetchTeacherData();
+    fetchFacultyId();
   }, [user, toast]);
+  
+  // Fetch courses taught by this faculty member
+  const fetchTeacherCourses = async (facultyId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('course_id, course_name, section_id, sections(name)')
+        .eq('faculty_id', facultyId);
+      
+      if (error) throw error;
+      
+      setTeacherCourses(data || []);
+      
+      // Fetch assignments for these courses
+      if (data && data.length > 0) {
+        fetchAssignments(data.map(course => course.course_id));
+      }
+    } catch (error) {
+      console.error("Error fetching teacher courses:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load course information",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Fetch assignments for teacher's courses
   const fetchAssignments = async (courseIds: number[]) => {
@@ -157,11 +169,18 @@ const TeacherAssignments = () => {
 
   // Handle form submission for creating/updating assignment
   const onSubmit = async (values: AssignmentFormValues) => {
+    if (!facultyId) {
+      toast({
+        title: "Error",
+        description: "Faculty information not available",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
-      
-      // Convert course_id string to number for database
-      const courseIdNumber = parseInt(values.course_id, 10);
+      console.info("Form values:", values);
       
       if (editingAssignment) {
         // Update existing assignment
@@ -171,7 +190,7 @@ const TeacherAssignments = () => {
             title: values.title,
             description: values.description,
             due_date: format(values.due_date, "yyyy-MM-dd"),
-            course_id: courseIdNumber
+            course_id: values.course_id
           })
           .eq('assignment_id', editingAssignment.assignment_id);
           
@@ -182,15 +201,15 @@ const TeacherAssignments = () => {
           description: "Assignment updated successfully",
         });
       } else {
-        // Create new assignment
-        // Ensure the created_by field is set to the faculty_id
+        // Create new assignment with the faculty_id
+        console.info("Creating new assignment with course_id:", values.course_id);
         const { error } = await supabase
           .from('assignments')
           .insert({
             title: values.title,
             description: values.description,
             due_date: format(values.due_date, "yyyy-MM-dd"),
-            course_id: courseIdNumber,
+            course_id: values.course_id,
             created_by: facultyId
           });
           
@@ -228,7 +247,7 @@ const TeacherAssignments = () => {
     setEditingAssignment(assignment);
     form.setValue("title", assignment.title);
     form.setValue("description", assignment.description);
-    form.setValue("course_id", assignment.course_id.toString());
+    form.setValue("course_id", assignment.course_id);
     form.setValue("due_date", new Date(assignment.due_date));
     setIsDialogOpen(true);
   };
@@ -373,8 +392,8 @@ const TeacherAssignments = () => {
                     <FormControl>
                       <select
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={field.value}
-                        onChange={field.onChange}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                         disabled={isSubmitting}
                       >
                         <option value="">Select a course</option>
