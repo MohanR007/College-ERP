@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -54,33 +53,32 @@ const StudentMarks = () => {
           throw new Error("Student not found");
         }
 
-        // Get marks with course information
-        const { data, error } = await supabase
+        // Get marks
+        const { data: marksData, error } = await supabase
           .from('marks')
-          .select(`
-            marks_id,
-            student_id,
-            course_id,
-            internal1,
-            internal2,
-            internal3,
-            semester_marks,
-            cgpa,
-            courses (
-              course_name
-            )
-          `)
+          .select('*')
           .eq('student_id', studentData.student_id);
 
         if (error) throw error;
 
-        // Format the marks data
-        const formattedMarks = data.map(mark => ({
-          ...mark,
-          course_name: mark.courses?.course_name || 'Unknown Course',
-          // Calculate total if internals and semester marks are available
-          total: calculateTotal(mark.internal1, mark.internal2, mark.internal3, mark.semester_marks)
-        }));
+        // Format the marks data with course names
+        const formattedMarks = [];
+        
+        for (const mark of marksData) {
+          // Fetch course information for this mark
+          const { data: courseData } = await supabase
+            .from('courses')
+            .select('course_name')
+            .eq('course_id', mark.course_id)
+            .single();
+          
+          formattedMarks.push({
+            ...mark,
+            course_name: courseData?.course_name || 'Unknown Course',
+            // Calculate total if internals and semester marks are available
+            total: calculateTotal(mark.internal1, mark.internal2, mark.internal3, mark.semester_marks)
+          });
+        }
 
         return formattedMarks;
       } catch (error) {

@@ -103,14 +103,7 @@ const StudentAttendance = () => {
         // Construct the query based on whether a course is selected
         let query = supabase
           .from('attendance')
-          .select(`
-            date,
-            status,
-            courses (
-              course_id,
-              course_name
-            )
-          `)
+          .select('date, status, course_id')
           .eq('student_id', studentData.student_id);
 
         if (selectedCourse) {
@@ -121,13 +114,23 @@ const StudentAttendance = () => {
 
         if (error) throw error;
 
-        // Format the attendance records
-        const formattedRecords = data.map(record => ({
-          date: record.date,
-          status: record.status || 'Unknown',
-          course_id: record.courses?.course_id,
-          course_name: record.courses?.course_name || 'Unknown Course'
-        }));
+        // Get course information separately for each attendance record
+        const formattedRecords = [];
+        for (const record of data) {
+          // Fetch course name for this course_id
+          const { data: courseData } = await supabase
+            .from('courses')
+            .select('course_name')
+            .eq('course_id', record.course_id)
+            .single();
+            
+          formattedRecords.push({
+            date: record.date,
+            status: record.status || 'Unknown',
+            course_id: record.course_id,
+            course_name: courseData?.course_name || 'Unknown Course'
+          });
+        }
 
         return formattedRecords;
       } catch (error) {
