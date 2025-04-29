@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, X, FilePen } from "lucide-react";
+import { Check, X, FilePen, File } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -190,6 +190,7 @@ const TeacherLeave = () => {
                     <TableHead>From Date</TableHead>
                     <TableHead>To Date</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>Proof</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -207,6 +208,21 @@ const TeacherLeave = () => {
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
                         {leave.reason}
+                      </TableCell>
+                      <TableCell>
+                        {leave.proof_url ? (
+                          <a 
+                            href={leave.proof_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center text-blue-600 hover:underline"
+                          >
+                            <File className="h-4 w-4 mr-1" />
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-sm ${getStatusBadgeClass(leave.status)}`}>
@@ -286,7 +302,6 @@ const TeacherLeave = () => {
         </Card>
       </div>
 
-      {/* Edit Leave Dialog - Removed since we're not actually editing the application */}
       <AlertDialog open={alertDialogData.isOpen} onOpenChange={(isOpen) => 
         setAlertDialogData(prev => ({ ...prev, isOpen }))
       }>

@@ -2,7 +2,7 @@
 import React, { useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Upload, File } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
@@ -27,13 +27,39 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         return;
       }
 
+      toast({
+        title: "Uploading file...",
+        description: "Please wait while we upload your file",
+      });
+
+      // Create the storage bucket if it doesn't exist
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage
+        .getBucket('leave-proofs');
+      
+      if (bucketError && bucketError.message.includes('does not exist')) {
+        // Create the bucket
+        const { error: createError } = await supabase
+          .storage
+          .createBucket('leave-proofs', {
+            public: true,
+            fileSizeLimit: 5242880, // 5MB
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
+          });
+        
+        if (createError) throw createError;
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError, data } = await supabase.storage
         .from('leave-proofs')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
         throw uploadError;
@@ -53,17 +79,26 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
       console.error('Error uploading file:', error);
       toast({
         title: "Upload failed",
-        description: "There was an error uploading your file",
+        description: "There was an error uploading your file. Please try again later.",
         variant: "destructive",
       });
     }
   }, [onUpload, toast]);
 
+  const getFileTypeFromUrl = (url?: string) => {
+    if (!url) return null;
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
+      return 'image';
+    }
+    return 'document';
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <Button asChild variant="outline">
-          <label className="cursor-pointer">
+          <label className="cursor-pointer flex items-center">
             <Upload className="mr-2 h-4 w-4" />
             Upload Proof
             <input
@@ -74,15 +109,19 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
             />
           </label>
         </Button>
+        
         {existingUrl && (
-          <a 
-            href={existingUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            View uploaded file
-          </a>
+          <div className="flex items-center">
+            <File className="h-4 w-4 mr-2 text-blue-600" />
+            <a 
+              href={existingUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              View uploaded file
+            </a>
+          </div>
         )}
       </div>
     </div>
