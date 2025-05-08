@@ -1,11 +1,92 @@
 
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
+
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['student-dashboard', user?.user_id],
+    queryFn: async () => {
+      // Get student data
+      const { data: studentData } = await supabase
+        .from('students')
+        .select('student_id, section_id')
+        .eq('user_id', user?.user_id)
+        .single();
+
+      if (!studentData) {
+        throw new Error('Student not found');
+      }
+
+      // Get courses for this student's section
+      const { data: courses } = await supabase
+        .from('courses')
+        .select('course_id')
+        .eq('section_id', studentData.section_id);
+      
+      const courseIds = (courses || []).map(c => c.course_id);
+      
+      // Get assignments due
+      const { data: pendingAssignments } = await supabase
+        .from('assignments')
+        .select('*')
+        .in('course_id', courseIds)
+        .gt('due_date', new Date().toISOString().split('T')[0]);
+      
+      // Get today's classes
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const today = dayNames[new Date().getDay()];
+      
+      const { data: todaysClasses } = await supabase
+        .from('timetable')
+        .select('*')
+        .eq('section_id', studentData.section_id)
+        .eq('day_of_week', today);
+      
+      // Get attendance percentage
+      const { data: attendanceData } = await supabase
+        .from('attendance')
+        .select('status')
+        .eq('student_id', studentData.student_id);
+      
+      let attendancePercentage = 0;
+      if (attendanceData && attendanceData.length > 0) {
+        const present = attendanceData.filter(a => a.status === 'Present').length;
+        attendancePercentage = Math.round((present / attendanceData.length) * 100);
+      }
+      
+      // Get recent notifications
+      const { data: recentNotifications } = await supabase
+        .from('assignments')
+        .select('title, created_at, courses(course_name)')
+        .in('course_id', courseIds)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      return {
+        assignmentsDue: pendingAssignments?.length || 0,
+        attendancePercentage: attendancePercentage || 0,
+        todaysClasses: todaysClasses?.length || 0,
+        recentNotifications: recentNotifications || []
+      };
+    },
+    enabled: !!user
+  });
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="h-8 w-8 border-4 border-t-edu-primary border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -22,7 +103,7 @@ const StudentDashboard = () => {
               <CardDescription>Upcoming assignment deadlines</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-edu-primary">5</p>
+              <p className="text-3xl font-bold text-edu-primary">{dashboardData?.assignmentsDue}</p>
             </CardContent>
           </Card>
 
@@ -32,7 +113,7 @@ const StudentDashboard = () => {
               <CardDescription>Your current attendance percentage</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-edu-primary">92%</p>
+              <p className="text-3xl font-bold text-edu-primary">{dashboardData?.attendancePercentage}%</p>
             </CardContent>
           </Card>
 
@@ -42,7 +123,7 @@ const StudentDashboard = () => {
               <CardDescription>Your scheduled classes for today</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-edu-primary">3</p>
+              <p className="text-3xl font-bold text-edu-primary">{dashboardData?.todaysClasses}</p>
             </CardContent>
           </Card>
         </div>
@@ -54,24 +135,22 @@ const StudentDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">New assignment posted in CS301</p>
-                  <p className="text-sm text-gray-500">Today, 9:30 AM</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Quiz grades uploaded for MT101</p>
-                  <p className="text-sm text-gray-500">Yesterday, 3:15 PM</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Class rescheduled: CS250 moved to Room 302</p>
-                  <p className="text-sm text-gray-500">May 22, 5:00 PM</p>
-                </div>
-              </div>
+              {dashboardData?.recentNotifications && dashboardData.recentNotifications.length > 0 ? (
+                dashboardData.recentNotifications.map((notification, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">
+                        New assignment posted: {notification.title} in {notification.courses?.course_name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(notification.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No recent notifications found.</p>
+              )}
             </div>
           </CardContent>
         </Card>
