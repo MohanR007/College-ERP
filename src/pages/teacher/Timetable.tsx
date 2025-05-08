@@ -95,9 +95,11 @@ const TeacherTimetable = () => {
                               {slots.map((slot, idx) => (
                                 <div key={idx} className="space-y-1">
                                   <div className="font-medium">{slot.courses?.course_name}</div>
-                                  <div className="text-sm text-gray-500">
-                                    Section: {slot.sections?.name}
-                                  </div>
+                                  {slot.sections?.name && (
+                                    <div className="text-sm text-gray-500">
+                                      {slot.sections.name}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
