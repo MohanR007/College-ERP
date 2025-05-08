@@ -97,7 +97,7 @@ const TeacherTimetable = () => {
                                   <div className="font-medium">{slot.courses?.course_name}</div>
                                   {slot.sections?.name && (
                                     <div className="text-sm text-gray-500">
-                                      {slot.sections.name}
+                                      Section {slot.sections.name}
                                     </div>
                                   )}
                                 </div>
