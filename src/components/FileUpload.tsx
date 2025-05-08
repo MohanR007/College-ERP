@@ -1,8 +1,8 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Upload, File } from "lucide-react";
+import { Upload, File, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
@@ -12,6 +12,7 @@ interface FileUploadProps {
 
 export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
   const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
 
   const uploadFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -27,27 +28,24 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         return;
       }
 
+      setIsUploading(true);
+      
       toast({
         title: "Uploading file...",
         description: "Please wait while we upload your file",
       });
 
       // Create the storage bucket if it doesn't exist
-      const { data: bucketData, error: bucketError } = await supabase
+      const { error: bucketError } = await supabase
         .storage
-        .getBucket('leave-proofs');
+        .createBucket('leave-proofs', {
+          public: true,
+          fileSizeLimit: 5242880, // 5MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
+        });
       
-      if (bucketError && bucketError.message.includes('does not exist')) {
-        // Create the bucket
-        const { error: createError } = await supabase
-          .storage
-          .createBucket('leave-proofs', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-            allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
-          });
-        
-        if (createError) throw createError;
+      if (bucketError && !bucketError.message.includes('already exists')) {
+        throw bucketError;
       }
 
       const fileExt = file.name.split('.').pop();
@@ -82,6 +80,8 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         description: "There was an error uploading your file. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   }, [onUpload, toast]);
 
@@ -97,15 +97,20 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" disabled={isUploading}>
           <label className="cursor-pointer flex items-center">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Proof
+            {isUploading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            {isUploading ? "Uploading..." : "Upload Proof"}
             <input
               type="file"
               className="hidden"
               accept=".pdf,.png,.jpg,.jpeg"
               onChange={uploadFile}
+              disabled={isUploading}
             />
           </label>
         </Button>

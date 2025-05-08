@@ -8,12 +8,21 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { FileTextIcon } from "lucide-react";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from "@/components/ui/dialog";
 
 const StudentAssignments = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -26,7 +35,7 @@ const StudentAssignments = () => {
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('student_id, section_id')
-          .eq('user_id', user.user_id) // Changed from user.id to user.user_id
+          .eq('user_id', user.user_id)
           .single();
 
         if (studentError) throw studentError;
@@ -73,6 +82,11 @@ const StudentAssignments = () => {
     fetchAssignments();
   }, [user, toast]);
 
+  const handleAssignmentClick = (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setIsDialogOpen(true);
+  };
+
   // Group assignments by due date status
   const currentDate = new Date();
   const upcomingAssignments = assignments.filter(
@@ -113,7 +127,11 @@ const StudentAssignments = () => {
                     </TableHeader>
                     <TableBody>
                       {upcomingAssignments.map((assignment) => (
-                        <TableRow key={assignment.assignment_id}>
+                        <TableRow 
+                          key={assignment.assignment_id} 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleAssignmentClick(assignment)}
+                        >
                           <TableCell className="font-medium flex items-center gap-2">
                             <FileTextIcon className="h-4 w-4 text-primary" />
                             {assignment.title}
@@ -152,7 +170,11 @@ const StudentAssignments = () => {
                     </TableHeader>
                     <TableBody>
                       {pastAssignments.map((assignment) => (
-                        <TableRow key={assignment.assignment_id}>
+                        <TableRow 
+                          key={assignment.assignment_id}
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleAssignmentClick(assignment)}
+                        >
                           <TableCell className="font-medium flex items-center gap-2">
                             <FileTextIcon className="h-4 w-4 text-muted-foreground" />
                             {assignment.title}
@@ -184,6 +206,29 @@ const StudentAssignments = () => {
                 </CardContent>
               </Card>
             )}
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{selectedAssignment?.title}</DialogTitle>
+                  <DialogDescription>
+                    {selectedAssignment?.courses?.course_name} • Due: {selectedAssignment?.due_date && format(new Date(selectedAssignment.due_date), "MMM d, yyyy")}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {selectedAssignment?.description || "No description provided."}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Teacher</h3>
+                    <p className="text-sm text-gray-700">{selectedAssignment?.courses?.faculty?.name || "Not specified"}</p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </div>
