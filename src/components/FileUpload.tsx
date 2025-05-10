@@ -36,17 +36,20 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
       });
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
+      // Access the storage bucket directly without trying to create it
       const { error: uploadError, data } = await supabase.storage
         .from('leave-proofs')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: file.type // Explicitly set the content type
         });
 
       if (uploadError) {
+        console.error('Error uploading file:', uploadError);
         throw uploadError;
       }
 
