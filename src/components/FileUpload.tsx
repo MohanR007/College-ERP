@@ -35,17 +35,20 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         description: "Please wait while we upload your file",
       });
 
+      // Generate a unique file name
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = fileName;
 
-      // Access the storage bucket directly without trying to create it
+      console.log("Attempting to upload file to leave-proofs bucket:", fileName);
+      
+      // Upload the file
       const { error: uploadError, data } = await supabase.storage
         .from('leave-proofs')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          contentType: file.type // Explicitly set the content type
+          upsert: true, // Change to true to overwrite if file exists with same name
+          contentType: file.type
         });
 
       if (uploadError) {
@@ -53,36 +56,32 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         throw uploadError;
       }
 
+      console.log("File uploaded successfully:", data);
+
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('leave-proofs')
         .getPublicUrl(filePath);
 
+      console.log("Generated public URL:", publicUrl);
+      
       onUpload(publicUrl);
       
       toast({
         title: "File uploaded",
         description: "Your file has been uploaded successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
       toast({
         title: "Upload failed",
-        description: "There was an error uploading your file. Please try again later.",
+        description: error.message || "There was an error uploading your file. Please try again later.",
         variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
   }, [onUpload, toast]);
-
-  const getFileTypeFromUrl = (url?: string) => {
-    if (!url) return null;
-    const extension = url.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
-      return 'image';
-    }
-    return 'document';
-  };
 
   return (
     <div className="flex flex-col gap-4">
