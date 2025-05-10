@@ -35,19 +35,6 @@ export const FileUpload = ({ onUpload, existingUrl }: FileUploadProps) => {
         description: "Please wait while we upload your file",
       });
 
-      // Create the storage bucket if it doesn't exist
-      const { error: bucketError } = await supabase
-        .storage
-        .createBucket('leave-proofs', {
-          public: true,
-          fileSizeLimit: 5242880, // 5MB
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
-        });
-      
-      if (bucketError && !bucketError.message.includes('already exists')) {
-        throw bucketError;
-      }
-
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
