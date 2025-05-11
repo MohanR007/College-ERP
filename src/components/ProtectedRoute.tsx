@@ -5,12 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ("student" | "faculty")[];
+  role?: "student" | "teacher";
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  allowedRoles = [] 
+  role 
 }) => {
   const { user, loading } = useAuth();
 
@@ -27,10 +27,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // If roles are specified, check if the user has the required role
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  // If role is specified, check if the user has the required role
+  if (role && user.role !== role) {
     // Redirect to the appropriate dashboard based on role
-    return <Navigate to={user.role === 'faculty' ? '/teacher-dashboard' : '/student-dashboard'} replace />;
+    return <Navigate to={user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />;
   }
 
   return <>{children}</>;

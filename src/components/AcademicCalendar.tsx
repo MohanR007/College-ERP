@@ -78,17 +78,17 @@ export function AcademicCalendar() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="border rounded-md"
+                className="border rounded-md pointer-events-auto"
                 modifiersClassNames={{
                   selected: 'bg-edu-primary text-white',
                 }}
                 modifiersStyles={{
                   selected: { fontWeight: 'bold' },
                 }}
-                styles={{
-                  day: (day) => ({
-                    className: getEventHighlight(day.date),
-                  }),
+                // Add custom day class for events
+                classNames={{
+                  day_today: getEventHighlight(new Date()),
+                  day: (date) => getEventHighlight(date)
                 }}
               />
             </div>

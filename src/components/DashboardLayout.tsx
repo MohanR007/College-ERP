@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +24,7 @@ const navLinkClasses = (isActive: boolean) =>
   );
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, role, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -34,6 +35,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       console.error("Logout failed:", error);
     }
   };
+
+  // Determine user role
+  const userRole = user?.role || '';
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -51,7 +55,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </SheetDescription>
           </SheetHeader>
           <nav className="mt-6 px-4 space-y-1">
-            {role === 'student' ? (
+            {userRole === 'student' ? (
               <>
                 <NavLink to="/student/dashboard" className={({ isActive }) => navLinkClasses(isActive)}>
                   <LayoutDashboard className="h-5 w-5 mr-2" />
@@ -74,7 +78,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   Academic Calendar
                 </NavLink>
               </>
-            ) : role === 'teacher' ? (
+            ) : userRole === 'teacher' ? (
               <>
                 <NavLink to="/teacher/dashboard" className={({ isActive }) => navLinkClasses(isActive)}>
                   <LayoutDashboard className="h-5 w-5 mr-2" />
@@ -118,7 +122,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <nav className="mt-6 px-4 space-y-1">
-          {role === 'student' ? (
+          {userRole === 'student' ? (
             <>
               <NavLink to="/student/dashboard" className={({ isActive }) => navLinkClasses(isActive)}>
                 <LayoutDashboard className="h-5 w-5 mr-2" />
@@ -141,7 +145,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 Academic Calendar
               </NavLink>
             </>
-          ) : role === 'teacher' ? (
+          ) : userRole === 'teacher' ? (
             <>
               <NavLink to="/teacher/dashboard" className={({ isActive }) => navLinkClasses(isActive)}>
                 <LayoutDashboard className="h-5 w-5 mr-2" />
