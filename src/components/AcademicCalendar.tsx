@@ -1,136 +1,187 @@
 
-import React from 'react';
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar as CalendarIcon } from "lucide-react";
 
-interface CalendarEvent {
-  event_id: number;
+interface Event {
+  id: number;
   title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
+  date: Date | string;
+  type: "holiday" | "exam" | "event";
+  description?: string;
 }
 
-export function AcademicCalendar() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [selectedEvent, setSelectedEvent] = React.useState<CalendarEvent | null>(null);
-  
-  const { data: events = [] } = useQuery({
-    queryKey: ['academic-calendar'],
-    queryFn: async (): Promise<CalendarEvent[]> => {
+const AcademicCalendar = () => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
+  const [eventsForSelectedDate, setEventsForSelectedDate] = useState<Event[]>(
+    []
+  );
+
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["academic-calendar-events"],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('academiccalendar')
-        .select('*');
-      
+        .from("academic_events")
+        .select("*");
+
       if (error) {
-        console.error("Error fetching academic calendar:", error);
+        console.error("Error fetching events:", error);
         throw error;
       }
-      
-      return data || [];
+
+      // Convert string dates to Date objects
+      return (data || []).map((event) => ({
+        ...event,
+        date: new Date(event.date),
+      }));
     },
   });
 
-  // Function to highlight dates with events
-  const getEventHighlight = (day: Date) => {
-    const formattedDate = day.toISOString().split('T')[0];
-    
-    const hasEvent = events.some(event => {
-      const startDate = new Date(event.start_date).toISOString().split('T')[0];
-      const endDate = new Date(event.end_date).toISOString().split('T')[0];
-      return formattedDate >= startDate && formattedDate <= endDate;
-    });
-    
-    return hasEvent ? 'bg-blue-100 text-blue-900 font-medium' : '';
+  useEffect(() => {
+    if (selectedDate && events.length > 0) {
+      const eventsOnThisDate = events.filter((event) => {
+        const eventDate = new Date(event.date);
+        return (
+          eventDate.getDate() === selectedDate.getDate() &&
+          eventDate.getMonth() === selectedDate.getMonth() &&
+          eventDate.getFullYear() === selectedDate.getFullYear()
+        );
+      });
+      setEventsForSelectedDate(eventsOnThisDate);
+    } else {
+      setEventsForSelectedDate([]);
+    }
+  }, [selectedDate, events]);
+
+  const getEventBadgeClass = (type: string) => {
+    switch (type) {
+      case "holiday":
+        return "bg-red-100 text-red-800 hover:bg-red-200";
+      case "exam":
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+      case "event":
+        return "bg-green-100 text-green-800 hover:bg-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+    }
   };
 
-  // Get events for the selected date
-  const getEventsForSelectedDate = () => {
-    if (!date) return [];
-    
-    const formattedDate = date.toISOString().split('T')[0];
-    
-    return events.filter(event => {
-      const startDate = new Date(event.start_date).toISOString().split('T')[0];
-      const endDate = new Date(event.end_date).toISOString().split('T')[0];
-      return formattedDate >= startDate && formattedDate <= endDate;
-    });
-  };
+  // Function to determine if a date has events
+  const getDayClass = (day: Date): string => {
+    if (!events || events.length === 0) return "";
 
-  const selectedDateEvents = getEventsForSelectedDate();
+    const hasEvent = events.some((event) => {
+      const eventDate = new Date(event.date);
+      return (
+        eventDate.getDate() === day.getDate() &&
+        eventDate.getMonth() === day.getMonth() &&
+        eventDate.getFullYear() === day.getFullYear()
+      );
+    });
+
+    return hasEvent ? "bg-blue-100 text-blue-900 font-medium" : "";
+  };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center">
-            <CalendarIcon className="h-5 w-5 mr-2" />
-            Academic Calendar
-          </CardTitle>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Academic Calendar</CardTitle>
+          <CardDescription>
+            Browse important academic dates and events
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="border rounded-md pointer-events-auto"
-                modifiersClassNames={{
-                  selected: 'bg-edu-primary text-white',
-                }}
-                modifiersStyles={{
-                  selected: { fontWeight: 'bold' },
-                }}
-                // Add custom day class for events
-                classNames={{
-                  day_today: getEventHighlight(new Date()),
-                  day: (date) => getEventHighlight(date)
-                }}
-              />
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            className="rounded-md border w-full"
+            modifiersClassNames={{
+              selected: "bg-edu-primary text-white",
+            }}
+            modifiers={{
+              hasEvent: (date) => {
+                if (!events || events.length === 0) return false;
+                return events.some((event) => {
+                  const eventDate = new Date(event.date);
+                  return (
+                    eventDate.getDate() === date.getDate() &&
+                    eventDate.getMonth() === date.getMonth() &&
+                    eventDate.getFullYear() === date.getFullYear()
+                  );
+                });
+              },
+            }}
+            classNames={{
+              day_hasEvent: "bg-blue-100 text-blue-900 font-medium",
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {selectedDate?.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </CardTitle>
+          <CardDescription>
+            {eventsForSelectedDate.length === 0
+              ? "No events scheduled"
+              : `${eventsForSelectedDate.length} event${
+                  eventsForSelectedDate.length !== 1 ? "s" : ""
+                } scheduled`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center p-6">
+              <div className="h-6 w-6 border-2 border-t-edu-primary border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
             </div>
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium mb-3">
-                Events on {date?.toLocaleDateString()}
-              </h3>
-              
-              {selectedDateEvents.length > 0 ? (
-                <div className="space-y-3">
-                  {selectedDateEvents.map((event) => (
-                    <Card key={event.event_id} className="overflow-hidden">
-                      <div 
-                        className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors`}
-                        onClick={() => setSelectedEvent(selectedEvent?.event_id === event.event_id ? null : event)}
-                      >
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">{event.title}</h4>
-                          <div className="text-xs text-gray-500">
-                            {new Date(event.start_date).toLocaleDateString()} - {new Date(event.end_date).toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {selectedEvent?.event_id === event.event_id && (
-                          <div className="mt-2 text-sm text-gray-600">
-                            {event.description}
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
+          ) : eventsForSelectedDate.length > 0 ? (
+            <div className="space-y-4">
+              {eventsForSelectedDate.map((event) => (
+                <div
+                  key={event.id}
+                  className="p-4 border rounded-lg bg-gray-50 space-y-2"
+                >
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-medium">{event.title}</h3>
+                    <Badge className={getEventBadgeClass(event.type)}>
+                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                    </Badge>
+                  </div>
+                  {event.description && (
+                    <p className="text-sm text-gray-600">{event.description}</p>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-md">
-                  <p className="text-gray-500">No events scheduled for this day.</p>
-                </div>
-              )}
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No events scheduled for this date.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default AcademicCalendar;

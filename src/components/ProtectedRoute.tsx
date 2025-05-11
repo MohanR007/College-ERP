@@ -27,10 +27,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
+  // Map faculty role to teacher for consistency in route protection
+  const userRole = user.role === "faculty" ? "teacher" : "student";
+
   // If role is specified, check if the user has the required role
-  if (role && user.role !== role) {
+  if (role && userRole !== role) {
     // Redirect to the appropriate dashboard based on role
-    return <Navigate to={user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />;
+    return <Navigate to={userRole === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />;
   }
 
   return <>{children}</>;

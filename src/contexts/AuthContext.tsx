@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Redirect based on role
-      navigate(userData.role === "faculty" ? "/teacher-dashboard" : "/student-dashboard");
+      navigate(userData.role === "faculty" ? "/teacher/dashboard" : "/student/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast({
