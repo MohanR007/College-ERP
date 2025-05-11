@@ -15,6 +15,10 @@ import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentLeave from "./pages/student/Leave";
 import TeacherLeave from "./pages/teacher/Leave";
+import StudentTimetable from "./pages/student/Timetable";
+import StudentMarks from "./pages/student/Marks";
+import StudentAttendance from "./pages/student/Attendance";
+import StudentAssignments from "./pages/student/Assignments";
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import AcademicCalendarPage from './pages/AcademicCalendarPage';
@@ -50,6 +54,34 @@ const App = () => {
                   <ProtectedRoute role="student">
                     <React.Suspense fallback={<div>Loading...</div>}>
                       <StudentLeave />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="timetable" element={
+                  <ProtectedRoute role="student">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <StudentTimetable />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="marks" element={
+                  <ProtectedRoute role="student">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <StudentMarks />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="attendance" element={
+                  <ProtectedRoute role="student">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <StudentAttendance />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="assignments" element={
+                  <ProtectedRoute role="student">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <StudentAssignments />
                     </React.Suspense>
                   </ProtectedRoute>
                 } />
