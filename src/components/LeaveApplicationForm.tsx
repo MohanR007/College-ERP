@@ -3,7 +3,6 @@ import React from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { FileUpload } from "./FileUpload";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +22,6 @@ const formSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters"),
   from_date: z.string(),
   to_date: z.string(),
-  proof_url: z.string().optional(),
 });
 
 interface LeaveApplicationFormProps {
@@ -33,7 +31,6 @@ interface LeaveApplicationFormProps {
     reason: string;
     from_date: string;
     to_date: string;
-    proof_url: string | null;
     status: string;
   };
 }
@@ -48,12 +45,10 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
       reason: initialData.reason || "",
       from_date: initialData.from_date?.split('T')[0] || "",
       to_date: initialData.to_date?.split('T')[0] || "",
-      proof_url: initialData.proof_url || "",
     } : {
       reason: "",
       from_date: "",
       to_date: "",
-      proof_url: "",
     },
   });
 
@@ -74,7 +69,6 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
         reason: values.reason,
         from_date: values.from_date,
         to_date: values.to_date,
-        proof_url: values.proof_url,
         status: 'Pending'
       };
 
@@ -158,23 +152,6 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="proof_url"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Supporting Document</FormLabel>
-              <FormControl>
-                <FileUpload
-                  onUpload={(url) => field.onChange(url)}
-                  existingUrl={field.value}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <Button type="submit">
           {initialData ? "Update Application" : "Submit Application"}
