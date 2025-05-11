@@ -1,53 +1,53 @@
 
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { format } from "date-fns";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
+type EventType = "holiday" | "exam" | "event";
 
 interface Event {
   id: number;
   title: string;
-  date: Date | string;
-  type: "holiday" | "exam" | "event";
+  date: Date;
+  type: EventType;
   description?: string;
 }
 
 const AcademicCalendar = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date()
-  );
-  const [eventsForSelectedDate, setEventsForSelectedDate] = useState<Event[]>(
-    []
-  );
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
 
-  const { data: events = [], isLoading } = useQuery({
+  // Fetch calendar events from supabase
+  const { data: events = [], isLoading, error } = useQuery({
     queryKey: ["academic-calendar-events"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("academiccalendar")
-        .select("*");
+      try {
+        const { data, error } = await supabase
+          .from("academiccalendar")
+          .select("*");
 
-      if (error) {
-        console.error("Error fetching events:", error);
-        throw error;
+        if (error) {
+          console.error("Error fetching events:", error);
+          throw error;
+        }
+
+        // Convert to Event objects with proper dates and types
+        return (data || []).map((event) => ({
+          id: event.event_id,
+          title: event.title || "Untitled Event",
+          date: new Date(event.start_date || new Date()),
+          type: determineEventType(event.title || ""),
+          description: event.description,
+        }));
+      } catch (error) {
+        console.error("Error in queryFn:", error);
+        return [];
       }
-
-      // Convert to Event objects with proper dates and types
-      return (data || []).map((event) => ({
-        id: event.event_id,
-        title: event.title || "Untitled Event",
-        date: new Date(event.start_date || new Date()),
-        type: determineEventType(event.title || ""),
-        description: event.description,
-      }));
     },
   });
 
@@ -64,60 +64,56 @@ const AcademicCalendar = () => {
 
   useEffect(() => {
     if (selectedDate && events.length > 0) {
-      const eventsOnThisDate = events.filter((event) => {
-        const eventDate = new Date(event.date);
-        return (
-          eventDate.getDate() === selectedDate.getDate() &&
-          eventDate.getMonth() === selectedDate.getMonth() &&
-          eventDate.getFullYear() === selectedDate.getFullYear()
-        );
-      });
-      setEventsForSelectedDate(eventsOnThisDate);
+      // Filter events for the selected date
+      const eventsForDate = events.filter(
+        (event) =>
+          event.date.getDate() === selectedDate.getDate() &&
+          event.date.getMonth() === selectedDate.getMonth() &&
+          event.date.getFullYear() === selectedDate.getFullYear()
+      );
+      setSelectedDateEvents(eventsForDate);
     } else {
-      setEventsForSelectedDate([]);
+      setSelectedDateEvents([]);
     }
   }, [selectedDate, events]);
 
-  const getEventBadgeClass = (type: string) => {
+  // Get badge color based on event type
+  const getBadgeColor = (type: EventType) => {
     switch (type) {
       case "holiday":
-        return "bg-red-100 text-red-800 hover:bg-red-200";
+        return "bg-red-500 hover:bg-red-600";
       case "exam":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+        return "bg-yellow-500 hover:bg-yellow-600";
       case "event":
-        return "bg-green-100 text-green-800 hover:bg-green-200";
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+        return "bg-edu-primary hover:bg-blue-600";
     }
   };
 
-  // Function to determine if a date has events
-  const getDayClass = (day: Date): string => {
-    if (!events || events.length === 0) return "";
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <div className="h-8 w-8 border-4 border-t-edu-primary border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-    const hasEvent = events.some((event) => {
-      const eventDate = new Date(event.date);
-      return (
-        eventDate.getDate() === day.getDate() &&
-        eventDate.getMonth() === day.getMonth() &&
-        eventDate.getFullYear() === day.getFullYear()
-      );
-    });
-
-    return hasEvent ? "bg-blue-100 text-blue-900 font-medium" : "";
-  };
+  if (error) {
+    return (
+      <div className="p-8 text-center text-red-500">
+        <p>Error loading calendar events. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <Card className="lg:col-span-2">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
         <CardHeader>
-          <CardTitle>Academic Calendar</CardTitle>
-          <CardDescription>
-            Browse important academic dates and events
-          </CardDescription>
+          <CardTitle>Calendar</CardTitle>
         </CardHeader>
         <CardContent>
-          <Calendar
+          <CalendarComponent
             mode="single"
             selected={selectedDate}
             onSelect={setSelectedDate}
@@ -128,15 +124,12 @@ const AcademicCalendar = () => {
             }}
             modifiers={{
               hasEvent: (date) => {
-                if (!events || events.length === 0) return false;
-                return events.some((event) => {
-                  const eventDate = new Date(event.date);
-                  return (
-                    eventDate.getDate() === date.getDate() &&
-                    eventDate.getMonth() === date.getMonth() &&
-                    eventDate.getFullYear() === date.getFullYear()
-                  );
-                });
+                return events.some(
+                  (event) =>
+                    event.date.getDate() === date.getDate() &&
+                    event.date.getMonth() === date.getMonth() &&
+                    event.date.getFullYear() === date.getFullYear()
+                );
               },
             }}
             classNames={{
@@ -149,50 +142,37 @@ const AcademicCalendar = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            {selectedDate?.toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            Events for{" "}
+            {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Selected date"}
           </CardTitle>
-          <CardDescription>
-            {eventsForSelectedDate.length === 0
-              ? "No events scheduled"
-              : `${eventsForSelectedDate.length} event${
-                  eventsForSelectedDate.length !== 1 ? "s" : ""
-                } scheduled`}
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-6">
-              <div className="h-6 w-6 border-2 border-t-edu-primary border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : eventsForSelectedDate.length > 0 ? (
-            <div className="space-y-4">
-              {eventsForSelectedDate.map((event) => (
-                <div
-                  key={event.id}
-                  className="p-4 border rounded-lg bg-gray-50 space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium">{event.title}</h3>
-                    <Badge className={getEventBadgeClass(event.type)}>
-                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                    </Badge>
+          <ScrollArea className="h-[400px] pr-4">
+            {selectedDateEvents.length > 0 ? (
+              <div className="space-y-4">
+                {selectedDateEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="bg-gray-50 p-4 rounded-md border border-gray-200"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium">{event.title}</h3>
+                      <Badge className={getBadgeColor(event.type)}>
+                        {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                      </Badge>
+                    </div>
+                    {event.description && (
+                      <p className="text-gray-600 text-sm">{event.description}</p>
+                    )}
                   </div>
-                  {event.description && (
-                    <p className="text-sm text-gray-600">{event.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No events scheduled for this date.
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 p-6">
+                <p>No events scheduled for this date</p>
+              </div>
+            )}
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

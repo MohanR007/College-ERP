@@ -1,14 +1,16 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, loading } = useAuth();
+  const { login, loading, user } = useAuth();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +57,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@example.com"
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -73,6 +76,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
             </div>
           </CardContent>

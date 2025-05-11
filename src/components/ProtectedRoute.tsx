@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -13,6 +13,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   role 
 }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -24,7 +25,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Not logged in
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Map faculty role to teacher for consistency in route protection
@@ -33,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If role is specified, check if the user has the required role
   if (role && userRole !== role) {
     // Redirect to the appropriate dashboard based on role
-    return <Navigate to={userRole === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />;
+    return <Navigate to={`/${userRole}/dashboard`} replace />;
   }
 
   return <>{children}</>;

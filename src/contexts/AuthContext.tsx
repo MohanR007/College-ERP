@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,6 +40,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setLoading(false);
   }, []);
+
+  // Redirect authenticated users away from login page
+  useEffect(() => {
+    if (user && location.pathname === "/login") {
+      const redirectPath = user.role === "faculty" ? "/teacher/dashboard" : "/student/dashboard";
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, location.pathname, navigate]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -103,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       title: "Logged out",
       description: "You have been successfully logged out",
     });
-    navigate("/");
+    navigate("/login");
   };
 
   return (
