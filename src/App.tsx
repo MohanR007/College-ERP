@@ -19,6 +19,10 @@ import StudentTimetable from "./pages/student/Timetable";
 import StudentMarks from "./pages/student/Marks";
 import StudentAttendance from "./pages/student/Attendance";
 import StudentAssignments from "./pages/student/Assignments";
+import TeacherAttendance from "./pages/teacher/Attendance";
+import TeacherMarks from "./pages/teacher/Marks";
+import TeacherAssignments from "./pages/teacher/Assignments";
+import TeacherTimetable from "./pages/teacher/Timetable";
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import AcademicCalendarPage from './pages/AcademicCalendarPage';
@@ -99,6 +103,34 @@ const App = () => {
                   <ProtectedRoute role="teacher">
                     <React.Suspense fallback={<div>Loading...</div>}>
                       <TeacherLeave />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="attendance" element={
+                  <ProtectedRoute role="teacher">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <TeacherAttendance />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="marks" element={
+                  <ProtectedRoute role="teacher">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <TeacherMarks />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="assignments" element={
+                  <ProtectedRoute role="teacher">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <TeacherAssignments />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                } />
+                <Route path="timetable" element={
+                  <ProtectedRoute role="teacher">
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <TeacherTimetable />
                     </React.Suspense>
                   </ProtectedRoute>
                 } />
