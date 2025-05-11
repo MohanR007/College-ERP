@@ -32,7 +32,7 @@ const AcademicCalendar = () => {
     queryKey: ["academic-calendar-events"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("academic_events")
+        .from("academiccalendar")
         .select("*");
 
       if (error) {
@@ -40,13 +40,27 @@ const AcademicCalendar = () => {
         throw error;
       }
 
-      // Convert string dates to Date objects
+      // Convert to Event objects with proper dates and types
       return (data || []).map((event) => ({
-        ...event,
-        date: new Date(event.date),
+        id: event.event_id,
+        title: event.title || "Untitled Event",
+        date: new Date(event.start_date || new Date()),
+        type: determineEventType(event.title || ""),
+        description: event.description,
       }));
     },
   });
+
+  // Helper to determine event type based on title
+  const determineEventType = (title: string): "holiday" | "exam" | "event" => {
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes("holiday") || lowerTitle.includes("vacation")) {
+      return "holiday";
+    } else if (lowerTitle.includes("exam") || lowerTitle.includes("test")) {
+      return "exam";
+    }
+    return "event";
+  };
 
   useEffect(() => {
     if (selectedDate && events.length > 0) {
@@ -110,6 +124,7 @@ const AcademicCalendar = () => {
             className="rounded-md border w-full"
             modifiersClassNames={{
               selected: "bg-edu-primary text-white",
+              today: "bg-accent text-accent-foreground",
             }}
             modifiers={{
               hasEvent: (date) => {
@@ -125,7 +140,7 @@ const AcademicCalendar = () => {
               },
             }}
             classNames={{
-              day_hasEvent: "bg-blue-100 text-blue-900 font-medium",
+              day: "rounded-md hover:bg-gray-100",
             }}
           />
         </CardContent>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import DashboardLayout from "@/components/DashboardLayout";
-import { AcademicCalendar } from "@/components/AcademicCalendar";
+import AcademicCalendar from "@/components/AcademicCalendar";
 
 const AcademicCalendarPage = () => {
   return (
