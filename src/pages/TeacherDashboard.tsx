@@ -85,7 +85,8 @@ const TeacherDashboard = () => {
       <div className="flex flex-col space-y-6">
         <h1 className="text-2xl font-semibold text-gray-900">Teacher Dashboard</h1>
         <p className="text-gray-500">
-          Welcome back, {user?.email}. Here's an overview of your activities.
+          {/* Display user's name instead of email */}
+          Welcome back, {user?.name || user?.email}. Here's an overview of your activities.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

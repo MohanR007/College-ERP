@@ -6,12 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "react-router-dom";
 
+/**
+ * Login component for user authentication
+ * Handles both the login form UI and authentication logic
+ */
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login, loading, user } = useAuth();
   const location = useLocation();
 
+  /**
+   * Handles form submission for login
+   * @param e - Form submission event
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await login(email, password);
@@ -93,15 +101,6 @@ const Login = () => {
             </Button>
           </CardFooter>
         </form>
-        <div className="px-8 py-4">
-          <div className="text-center text-sm text-gray-500">
-            <div className="flex flex-col space-y-2">
-              <p>Demo Accounts:</p>
-              <p><strong>Teacher:</strong> teacher@example.com / password</p>
-              <p><strong>Student:</strong> student@example.com / password</p>
-            </div>
-          </div>
-        </div>
       </Card>
     </div>
   );
