@@ -27,8 +27,16 @@ import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import AcademicCalendarPage from './pages/AcademicCalendarPage';
 
+// Initialize React Query client
 const queryClient = new QueryClient();
 
+/**
+ * Main App component that sets up:
+ * - React Query for data fetching
+ * - Theme provider for light/dark mode
+ * - Authentication context
+ * - Routing structure for the application
+ */
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -36,8 +44,11 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              
+              {/* Academic Calendar - Available to all authenticated users */}
               <Route path="/academic-calendar" element={
                 <ProtectedRoute>
                   <React.Suspense fallback={<div>Loading...</div>}>
@@ -45,7 +56,8 @@ const App = () => {
                   </React.Suspense>
                 </ProtectedRoute>
               } />
-              {/* Student routes */}
+              
+              {/* Student Routes */}
               <Route path="/student">
                 <Route path="dashboard" element={
                   <ProtectedRoute role="student">
@@ -90,7 +102,8 @@ const App = () => {
                   </ProtectedRoute>
                 } />
               </Route>
-              {/* Teacher routes */}
+              
+              {/* Teacher Routes */}
               <Route path="/teacher">
                 <Route path="dashboard" element={
                   <ProtectedRoute role="teacher">
@@ -135,6 +148,8 @@ const App = () => {
                   </ProtectedRoute>
                 } />
               </Route>
+              
+              {/* Catch-all route for 404 errors */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
