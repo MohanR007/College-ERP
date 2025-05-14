@@ -1,1 +1,9 @@
+
 project_id = "cakuykyvenzuntlifsni"
+
+[auth]
+# No specific auth settings needed for storage
+
+[storage]
+# Enable storage for file uploads
+file_size_limit = "5MB"
