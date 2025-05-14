@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,11 +17,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FileUpload } from "@/components/FileUpload";
 
 const formSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters"),
   from_date: z.string(),
   to_date: z.string(),
+  proof_url: z.string().optional(),
 });
 
 interface LeaveApplicationFormProps {
@@ -32,12 +34,14 @@ interface LeaveApplicationFormProps {
     from_date: string;
     to_date: string;
     status: string;
+    proof_url?: string;
   };
 }
 
 export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicationFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [documentUrl, setDocumentUrl] = useState<string | undefined>(initialData?.proof_url);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,12 +49,19 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
       reason: initialData.reason || "",
       from_date: initialData.from_date?.split('T')[0] || "",
       to_date: initialData.to_date?.split('T')[0] || "",
+      proof_url: initialData.proof_url || "",
     } : {
       reason: "",
       from_date: "",
       to_date: "",
+      proof_url: "",
     },
   });
+
+  const handleFileUpload = (url: string) => {
+    setDocumentUrl(url);
+    form.setValue("proof_url", url);
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -69,6 +80,7 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
         reason: values.reason,
         from_date: values.from_date,
         to_date: values.to_date,
+        proof_url: documentUrl || null,
         status: 'Pending'
       };
 
@@ -151,6 +163,19 @@ export function LeaveApplicationForm({ onSuccess, initialData }: LeaveApplicatio
               </FormItem>
             )}
           />
+        </div>
+        
+        <div>
+          <FormLabel>Supporting Document (Optional)</FormLabel>
+          <div className="mt-2">
+            <FileUpload 
+              onUpload={handleFileUpload} 
+              existingUrl={documentUrl}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Upload any supporting document (medical certificate, official letter, etc.)
+          </p>
         </div>
 
         <Button type="submit">

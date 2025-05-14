@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, X, FilePen } from "lucide-react";
+import { Check, X, FilePen, FileText } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -191,6 +190,7 @@ const TeacherLeave = () => {
                     <TableHead>To Date</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Proof</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -212,6 +212,20 @@ const TeacherLeave = () => {
                         <span className={`px-2 py-1 rounded-full text-sm ${getStatusBadgeClass(leave.status)}`}>
                           {leave.status}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {leave.proof_url ? (
+                          <a 
+                            href={leave.proof_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:underline flex items-center"
+                          >
+                            <FileText className="h-4 w-4 mr-1" /> View
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">None</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">

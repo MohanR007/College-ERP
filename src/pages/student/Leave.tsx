@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { FilePen } from "lucide-react";
+import { FilePen, FileText } from "lucide-react";
 
 const StudentLeave = () => {
   const { user } = useAuth();
@@ -109,6 +109,7 @@ const StudentLeave = () => {
                     <TableHead>Reason</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Reviewed By</TableHead>
+                    <TableHead>Proof</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -130,6 +131,20 @@ const StudentLeave = () => {
                         </span>
                       </TableCell>
                       <TableCell>{leave.faculty?.name || '-'}</TableCell>
+                      <TableCell>
+                        {leave.proof_url ? (
+                          <a 
+                            href={leave.proof_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:underline flex items-center"
+                          >
+                            <FileText className="h-4 w-4 mr-1" /> View
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">None</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {leave.status === 'Pending' && (
                           <Button
