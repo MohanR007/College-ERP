@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLocation } from "react-router-dom";
 
 /**
  * Login component for user authentication
@@ -14,7 +13,6 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login, loading, user } = useAuth();
-  const location = useLocation();
 
   /**
    * Handles form submission for login
@@ -47,7 +45,7 @@ const Login = () => {
               </svg>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center font-bold">College ERP Portal</CardTitle>
+          <CardTitle className="text-2xl text-center font-bold">Attend Ace Guardian</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
