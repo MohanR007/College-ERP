@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface User {
@@ -25,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in (from localStorage)
@@ -86,20 +84,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       localStorage.setItem("erpUser", JSON.stringify(userData));
       
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${name || userData.email}!`,
-      });
+      // Removed toast notification for login
       
       // Redirect based on role
       navigate(userData.role === "faculty" ? "/teacher/dashboard" : "/student/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: "Invalid email or password",
-        variant: "destructive",
-      });
+      // Removed toast notification for login error
     } finally {
       setLoading(false);
     }
@@ -108,10 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem("erpUser");
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
+    // Removed toast notification for logout
     navigate("/login");
   };
 
