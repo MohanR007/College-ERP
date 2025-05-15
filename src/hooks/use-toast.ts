@@ -152,13 +152,11 @@ function toast(props: Toast) {
     
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
-  // Automatically add toast to dismiss queue after creation
-  const autoCloseToast = { ...props, id };
-  
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...autoCloseToast,
+      ...props,
+      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss();
@@ -167,7 +165,7 @@ function toast(props: Toast) {
     },
   });
 
-  // Automatically dismiss after TOAST_REMOVE_DELAY
+  // Auto-dismiss toast after TOAST_REMOVE_DELAY
   setTimeout(() => {
     dismiss();
   }, TOAST_REMOVE_DELAY);
