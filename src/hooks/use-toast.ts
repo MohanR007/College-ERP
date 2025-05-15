@@ -1,11 +1,12 @@
+
 import * as React from "react";
 import {
   type ToastActionElement,
   type ToastProps,
 } from "@/components/ui/toast";
 
+const TOAST_REMOVE_DELAY = 2000; // 2 seconds for auto-dismiss
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 2000; // Changed from 1000000 to 2000 (2 seconds)
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -92,8 +93,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action;
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Side effects - Add to remove queue
       if (toastId) {
         addToRemoveQueue(toastId);
       } else {
@@ -141,7 +141,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-function toast({ ...props }: Toast) {
+function toast(props: Toast) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -149,18 +149,28 @@ function toast({ ...props }: Toast) {
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     });
+    
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
+  // Automatically add toast to dismiss queue after creation
+  const autoCloseToast = { ...props, id };
+  
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
+      ...autoCloseToast,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss();
+        if (props.onOpenChange) props.onOpenChange(open);
       },
     },
   });
+
+  // Automatically dismiss after TOAST_REMOVE_DELAY
+  setTimeout(() => {
+    dismiss();
+  }, TOAST_REMOVE_DELAY);
 
   return {
     id,
