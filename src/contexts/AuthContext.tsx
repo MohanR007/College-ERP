@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface User {
   user_id: number;
@@ -84,13 +85,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       localStorage.setItem("erpUser", JSON.stringify(userData));
       
-      // Removed toast notification for login
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${userData.name || userData.email}!`,
+        duration: 2000,
+      });
       
       // Redirect based on role
       navigate(userData.role === "faculty" ? "/teacher/dashboard" : "/student/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      // Removed toast notification for login error
+      toast({
+        title: "Login failed",
+        description: "Invalid email or password",
+        variant: "destructive",
+        duration: 2000,
+      });
     } finally {
       setLoading(false);
     }
@@ -99,7 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem("erpUser");
-    // Removed toast notification for logout
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+      duration: 2000,
+    });
     navigate("/login");
   };
 
