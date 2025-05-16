@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, X, FilePen, FileText } from "lucide-react";
+import { Check, X, FilePen, FileText, Filter } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -23,6 +24,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { LeaveApplicationForm } from "@/components/LeaveApplicationForm";
 
@@ -30,6 +47,8 @@ const TeacherLeave = () => {
   const { user } = useAuth();
   const [editingLeave, setEditingLeave] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [sections, setSections] = useState<{id: number, name: string}[]>([]);
   const [alertDialogData, setAlertDialogData] = useState<{ 
     isOpen: boolean; 
     title: string; 
@@ -59,8 +78,44 @@ const TeacherLeave = () => {
     enabled: !!user
   });
 
+  // Get sections that this faculty teaches
+  useQuery({
+    queryKey: ['faculty-sections', facultyData?.faculty_id],
+    queryFn: async () => {
+      if (!facultyData?.faculty_id) return [];
+
+      // Get the sections this faculty teaches
+      const { data: courseData } = await supabase
+        .from('courses')
+        .select('section_id')
+        .eq('faculty_id', facultyData.faculty_id);
+      
+      if (!courseData || courseData.length === 0) return [];
+      
+      // Get unique section IDs
+      const sectionIds = [...new Set(courseData.map(course => course.section_id))];
+      
+      // Get section details
+      const { data: sectionsData } = await supabase
+        .from('sections')
+        .select('section_id, name')
+        .in('section_id', sectionIds);
+      
+      if (sectionsData) {
+        const formattedSections = sectionsData.map(section => ({
+          id: section.section_id,
+          name: section.name
+        }));
+        setSections(formattedSections);
+      }
+      
+      return sectionsData || [];
+    },
+    enabled: !!facultyData?.faculty_id
+  });
+
   const { data: leaveApplications, refetch } = useQuery({
-    queryKey: ['teacher-leave-applications', facultyData?.faculty_id],
+    queryKey: ['teacher-leave-applications', facultyData?.faculty_id, selectedSection],
     queryFn: async () => {
       if (!facultyData?.faculty_id) return [];
 
@@ -72,8 +127,11 @@ const TeacherLeave = () => {
       
       if (!courseData || courseData.length === 0) return [];
 
-      // Get the sections this faculty teaches
-      const sectionIds = [...new Set(courseData.map(course => course.section_id))];
+      // Apply section filter if selected
+      let sectionIds = [...new Set(courseData.map(course => course.section_id))];
+      if (selectedSection) {
+        sectionIds = sectionIds.filter(id => id === parseInt(selectedSection));
+      }
       
       // Get students from these sections
       const { data: studentsData } = await supabase
@@ -91,7 +149,7 @@ const TeacherLeave = () => {
           student:student_id(
             student_id,
             name,
-            section:section_id(name)
+            section:section_id(name, section_id)
           )
         `)
         .in('student_id', studentsData.map(s => s.student_id))
@@ -125,7 +183,8 @@ const TeacherLeave = () => {
           
           toast({
             title: `Leave application ${newStatus.toLowerCase()}`,
-            description: `The leave application has been ${newStatus === 'Pending' ? 'reset' : newStatus.toLowerCase()} successfully.`
+            description: `The leave application has been ${newStatus === 'Pending' ? 'reset' : newStatus.toLowerCase()} successfully.`,
+            duration: 3000
           });
           refetch();
         } catch (error) {
@@ -133,7 +192,8 @@ const TeacherLeave = () => {
           toast({
             title: "Error",
             description: `Failed to ${actionText} the leave application.`,
-            variant: "destructive"
+            variant: "destructive",
+            duration: 3000
           });
         } finally {
           setIsProcessing(false);
@@ -154,8 +214,13 @@ const TeacherLeave = () => {
     refetch();
     toast({
       title: "Leave application updated",
-      description: "The leave application has been updated successfully."
+      description: "The leave application has been updated successfully.",
+      duration: 3000
     });
+  };
+
+  const handleSectionChange = (sectionId: string) => {
+    setSelectedSection(sectionId);
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -174,6 +239,34 @@ const TeacherLeave = () => {
       <div className="flex flex-col space-y-6">
         <h1 className="text-2xl font-semibold text-gray-900">Leave Management</h1>
         <p className="text-gray-500">Review and approve student leave applications.</p>
+
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span>Filter Section: {selectedSection ? sections.find(s => s.id.toString() === selectedSection)?.name || selectedSection : 'All'}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Filter by Section</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setSelectedSection(null)}>
+                  All Sections
+                </DropdownMenuItem>
+                {sections.map((section) => (
+                  <DropdownMenuItem 
+                    key={section.id} 
+                    onClick={() => handleSectionChange(section.id.toString())}
+                  >
+                    {section.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         <Card>
           <CardHeader>
@@ -292,7 +385,7 @@ const TeacherLeave = () => {
               <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-md">
                 <h3 className="text-lg font-medium text-gray-900">No Leave Applications</h3>
                 <p className="mt-1 text-gray-500">
-                  There are no leave applications from students in your sections.
+                  There are no leave applications from students {selectedSection ? 'in this section' : 'in your sections'}.
                 </p>
               </div>
             )}

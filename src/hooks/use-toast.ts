@@ -141,16 +141,15 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">;
 
 function toast(props: Toast) {
-  const id = genId();
   const duration = props.duration || 5000; // Default 5 seconds
 
   const update = (props: Partial<ToasterToast> & { id: string }) =>
     dispatch({
       type: "UPDATE_TOAST",
-      toast: { ...props, id },
+      toast: { ...props },
     });
     
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
+  const dismiss = (toastId: string) => dispatch({ type: "DISMISS_TOAST", toastId });
 
   dispatch({
     type: "ADD_TOAST",
@@ -158,23 +157,31 @@ function toast(props: Toast) {
       ...props,
       open: true,
       onOpenChange: (open) => {
-        if (!open) dismiss();
+        if (!open) {
+          const { toasts } = memoryState;
+          const toast = toasts[toasts.length - 1];
+          if (toast) dismiss(toast.id);
+        }
         if (props.onOpenChange) props.onOpenChange(open);
       },
     },
   });
 
+  // Get the most recently added toast ID
+  const { toasts } = memoryState;
+  const id = toasts[toasts.length - 1]?.id || '';
+
   // Auto-dismiss toast after duration
   if (duration !== Infinity) {
     setTimeout(() => {
-      dismiss();
+      dismiss(id);
     }, duration);
   }
 
   return {
     id,
-    dismiss,
-    update,
+    dismiss: () => dismiss(id),
+    update: (props: Partial<Omit<ToasterToast, "id">>) => update({ id, ...props }),
   };
 }
 
