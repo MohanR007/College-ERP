@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: "Login successful",
         description: `Welcome back, ${userData.name || userData.email}!`,
-        duration: 2000,
+        duration: 3000,
       });
       
       // Redirect based on role
@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Login failed",
         description: "Invalid email or password",
         variant: "destructive",
-        duration: 2000,
+        duration: 3000,
       });
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast({
       title: "Logged out",
       description: "You have been successfully logged out",
-      duration: 2000,
+      duration: 3000,
     });
     navigate("/login");
   };

@@ -5,7 +5,6 @@ import {
   type ToastProps,
 } from "@/components/ui/toast";
 
-const TOAST_REMOVE_DELAY = 2000; // 2 seconds for auto-dismiss
 const TOAST_LIMIT = 5;
 
 type ToasterToast = ToastProps & {
@@ -13,6 +12,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  duration?: number;
 };
 
 const actionTypes = {
@@ -38,7 +38,7 @@ type Action =
     }
   | {
       type: ActionType["UPDATE_TOAST"];
-      toast: Partial<ToasterToast>;
+      toast: Partial<ToasterToast> & { id: string };
     }
   | {
       type: ActionType["DISMISS_TOAST"];
@@ -53,6 +53,7 @@ interface State {
   toasts: ToasterToast[];
 }
 
+// Map to store toast timeouts
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const addToRemoveQueue = (toastId: string) => {
@@ -66,7 +67,7 @@ const addToRemoveQueue = (toastId: string) => {
       type: "REMOVE_TOAST",
       toastId: toastId,
     });
-  }, TOAST_REMOVE_DELAY);
+  }, 1000); // Delay between dismiss and remove
 
   toastTimeouts.set(toastId, timeout);
 };
@@ -74,12 +75,10 @@ const addToRemoveQueue = (toastId: string) => {
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
+      const newToast = { ...action.toast, id: genId() };
       return {
         ...state,
-        toasts: [
-          ...state.toasts,
-          { ...action.toast, id: genId() },
-        ].slice(-TOAST_LIMIT),
+        toasts: [...state.toasts, newToast].slice(-TOAST_LIMIT),
       };
 
     case "UPDATE_TOAST":
@@ -143,8 +142,9 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast(props: Toast) {
   const id = genId();
+  const duration = props.duration || 5000; // Default 5 seconds
 
-  const update = (props: ToasterToast) =>
+  const update = (props: Partial<ToasterToast> & { id: string }) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
@@ -156,6 +156,7 @@ function toast(props: Toast) {
     type: "ADD_TOAST",
     toast: {
       ...props,
+      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss();
@@ -164,10 +165,12 @@ function toast(props: Toast) {
     },
   });
 
-  // Auto-dismiss toast after TOAST_REMOVE_DELAY
-  setTimeout(() => {
-    dismiss();
-  }, TOAST_REMOVE_DELAY);
+  // Auto-dismiss toast after duration
+  if (duration !== Infinity) {
+    setTimeout(() => {
+      dismiss();
+    }, duration);
+  }
 
   return {
     id,
