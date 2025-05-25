@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -105,7 +104,7 @@ const DashboardLayout = ({ children }) => {
             </svg>
           </div>
           <div>
-            <p className="font-semibold">Attend Ace Guardian</p>
+            <p className="font-semibold">College Erp</p>
             <p className="text-xs text-gray-500 capitalize">{userRole}</p>
           </div>
         </div>
@@ -167,7 +166,7 @@ const DashboardLayout = ({ children }) => {
               </svg>
             </div>
             <div>
-              <p className="font-semibold">Attend Ace Guardian</p>
+              <p className="font-semibold">College Erp</p>
               <p className="text-xs text-gray-500 capitalize">{userRole}</p>
             </div>
           </div>
@@ -207,7 +206,7 @@ const DashboardLayout = ({ children }) => {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold">Attend Ace Guardian</p>
+                  <p className="font-semibold">College Erp</p>
                   <p className="text-xs text-gray-500 capitalize">{userRole}</p>
                 </div>
               </div>

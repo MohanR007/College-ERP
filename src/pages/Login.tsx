@@ -45,7 +45,7 @@ const Login = () => {
               </svg>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center font-bold">Attend Ace Guardian</CardTitle>
+          <CardTitle className="text-2xl text-center font-bold">College Erp</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
